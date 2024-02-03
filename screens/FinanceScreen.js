@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Image } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Image, Alert } from "react-native";
 //import { Icon } from "react-native-elements";
 import { Ionicons } from "@expo/vector-icons";
 import tw from "tailwind-react-native-classnames";
@@ -7,6 +7,7 @@ import { useNavigation } from "@react-navigation/native";
 import { setPerson, selectPerson } from "../slices/personSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { ActivityIndicator } from "react-native";
+import * as Clipboard from "expo-clipboard";
 
 import { db, auth } from "../firebaseConfig";
 import firebase from "firebase/compat/app";
@@ -29,6 +30,14 @@ const FinanceScreen = () => {
   const [totalTransactions, setTotalTransactions] = useState(0);
   const [transactionsList, setTransactionsList] = useState([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
+
+
+  const copyToClipboard = async (textToCopy) => {
+    await Clipboard.setStringAsync(textToCopy);
+    Alert.alert(
+      "Ride ID Copied"
+    );
+  };
 
   console.log("Finances User: ", person["authID"]);
 
@@ -64,8 +73,11 @@ const FinanceScreen = () => {
                 console.log("Document ID: ", doc.id);
                 console.log("Document Data: ", doc.data()["driverRevenue"]);
 
+                // 0.85 * (ride.totalAmount - ride.totalDeduction)
+                const theRideRef = doc.data()
+
                 // Append to totalRevenue
-                totalRevenues.push(doc.data()["driverRevenue"]);
+                totalRevenues.push(0.85 * (theRideRef.totalAmount));
                 // Append to newTransactionsList
                 newTransactionsList.push({ id, ...data });
               });
@@ -409,21 +421,23 @@ const FinanceScreen = () => {
 
   const renderRideCard = (ride) => {
     return (
-      <View key={ride.id} style={tw`bg-white p-4 mb-4`}>
-        <Text style={tw`text-gray-900 text-lg font-bold mb-1`}>
-          Ride: {ride.rideId}
-        </Text>
-        <View style={tw`border-t border-gray-300 mt-2`}>
-          <Text style={tw`text-gray-400`}>Total Amount</Text>
-          <Text style={tw`text-gray-900 font-bold text-lg`}>
-            {ride.totalAmount}
+      <TouchableOpacity onPress={() => copyToClipboard(ride.rideId)}>
+        <View key={ride.rideId} style={tw`bg-white p-4 mb-4`}>
+          <Text style={tw`text-gray-900 text-lg font-bold mb-1`}>
+            Ride: {ride.rideId}
           </Text>
-          <Text style={tw`text-gray-400 mt-2`}>Total Revenue</Text>
-          <Text style={tw`text-gray-900 font-bold text-lg`}>
-            {ride.driverRevenue}
-          </Text>
+          <View style={tw`border-t border-gray-300 mt-2`}>
+            <Text style={tw`text-gray-400`}>Total Amount</Text>
+            <Text style={tw`text-gray-900 font-bold text-lg`}>
+              {ride.totalAmount}
+            </Text>
+            <Text style={tw`text-gray-400 mt-2`}>Total Revenue</Text>
+            <Text style={tw`text-gray-900 font-bold text-lg`}>
+              {0.85 * (ride.totalAmount)}
+            </Text>
+          </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -457,7 +471,7 @@ const FinanceScreen = () => {
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="menu-outline" color="black" size={24} />
           </TouchableOpacity>
-          <Text style={tw`text-lg font-bold`}>History</Text>
+          <Text style={tw`text-lg font-bold`}>Earnings</Text>
           <View style={tw`w-6`} />
         </View>
       </View>

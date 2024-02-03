@@ -62,11 +62,6 @@ function MenuScreen() {
 
   const menuItems = [
 
-    { 
-      name: "History",  
-      icon: "copy",
-      screen: "HistoryScreen" },
-
     {
       name: "Notifications", 
       icon: "notifications",

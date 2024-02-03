@@ -12,6 +12,7 @@
   "dependencies": {
     "@expo/webpack-config": "~19.0.1",
     "@react-native-async-storage/async-storage": "^1.21.0",
+    "@react-native-clipboard/clipboard": "^1.13.2",
     "@react-native-community/datetimepicker": "^7.6.2",
     "@react-navigation/drawer": "^6.6.6",
     "@react-navigation/native": "^6.1.9",
@@ -20,6 +21,7 @@
     "@reduxjs/toolkit": "^2.1.0",
     "deprecated-react-native-prop-types": "^5.0.0",
     "expo": "~50.0.4",
+    "expo-clipboard": "^5.0.1",
     "expo-constants": "^15.4.5",
     "expo-image-picker": "^14.7.1",
     "expo-status-bar": "~1.11.1",
