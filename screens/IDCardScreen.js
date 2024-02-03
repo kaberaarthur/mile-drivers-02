@@ -16,8 +16,11 @@ import * as ImagePicker from "expo-image-picker";
 import { db, auth } from "../firebaseConfig";
 import firebase from "firebase/compat/app";
 import "firebase/compat/storage";
-
 import { ActivityIndicator } from "react-native";
+
+import { useDispatch, useSelector } from "react-redux";
+import { selectPerson, setPerson } from "../slices/personSlice";
+
 
 const IDCardScreen = () => {
   const navigation = useNavigation();
@@ -28,30 +31,17 @@ const IDCardScreen = () => {
   const [downloadURL, setDownloadURL] = useState("");
   const [imageError, setImageError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
   const [isModalVisible, setModalVisible] = useState(false);
+
+  const person = useSelector(selectPerson);
+  console.log("ID Card Person: ", person)
+
 
   const handleGoBack = () => {
     navigation.goBack();
   };
 
-  /*
-  const handlePhotoUpload = async () => {
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (permissionResult.granted === false) {
-      console.log("Permission to access camera roll is required!");
-      return;
-    }
-
-    const pickerResult = await ImagePicker.launchImageLibraryAsync();
-
-    if (!pickerResult.canceled) {
-      setPhoto(pickerResult.assets[0].uri);
-    }
-  };
-  */
+  
 
   const handlePhotoUpload = async () => {
     const permissionResult =
@@ -66,7 +56,7 @@ const IDCardScreen = () => {
 
     if (!pickerResult.canceled) {
       const imageUri = pickerResult.assets[0].uri;
-      const userUid = auth.currentUser.uid;
+      const userUid = person.authID;
       const timestamp = new Date().getTime();
 
       // Extract file extension from the image's URI
@@ -123,7 +113,7 @@ const IDCardScreen = () => {
       return;
     }
 
-    const userUid = auth.currentUser.uid;
+    const userUid = person.authID;
 
     try {
       const docRef = db.collection("nationalIDS").doc(userUid);
