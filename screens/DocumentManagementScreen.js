@@ -13,6 +13,7 @@ const DocumentManagementScreen = () => {
   const person = useSelector(selectPerson);
 
   const [nationalID, setNationalID] = useState(null);
+  const [nationalIDApproved, setNationalIDApproved] = useState(null);
 
   useEffect(() => {
     const fetchNationalID = async () => {
@@ -24,6 +25,7 @@ const DocumentManagementScreen = () => {
           if (nationalIDSnapshot.exists) {
             const nationalIDData = nationalIDSnapshot.data();
             setNationalID(nationalIDData.downloadURL);
+            setNationalIDApproved(nationalIDData.approved);
 
             console.log("Driver's National ID: ", nationalIDData.downloadURL)
           } else {
@@ -65,7 +67,8 @@ const DocumentManagementScreen = () => {
         </TouchableOpacity>
       </View>
       <ScrollView style={tw`bg-gray-100 flex-1`}>
-      {nationalID ? (
+
+      {nationalID && nationalIDApproved ? (
           <TouchableOpacity>
             <View style={tw`bg-white rounded-md mx-4 my-4 p-4`}>
               <Image
