@@ -15,6 +15,9 @@ const DocumentManagementScreen = () => {
   const [nationalID, setNationalID] = useState(null);
   const [nationalIDApproved, setNationalIDApproved] = useState(null);
 
+  const [dl, setDl] = useState(null);
+  const [DlApproved, setDlApproved] = useState(null);
+
   useEffect(() => {
     const fetchNationalID = async () => {
       if (person) {
@@ -40,6 +43,34 @@ const DocumentManagementScreen = () => {
     };
 
     fetchNationalID();
+  }, [person]);
+
+  // Fetch DL Document
+  useEffect(() => {
+    const fetchDl = async () => {
+      if (person) {
+        try {
+          const DlRef = db.collection('drivingLicense').doc(person.authID);
+          const DlSnapshot = await DlRef.get();
+
+          if (DlSnapshot.exists) {
+            const DlData = DlSnapshot.data();
+            setDl(DlData.downloadURL);
+            setDlApproved(DlData.approved);
+
+            console.log("Driver's License: ", DlData.downloadURL)
+          } else {
+            // Handle the case when the document doesn't exist
+            console.log('Driving License document not found');
+          }
+        } catch (error) {
+          // Handle errors here
+          console.error('Error fetching Driver License:', error);
+        }
+      }
+    };
+
+    fetchDl();
   }, [person]);
 
   const handleGoBack = () => {
@@ -94,12 +125,27 @@ const DocumentManagementScreen = () => {
                 </View>
               </View>
               <Text style={tw`text-lg font-semibold mt-2`}>
-                Identification Card
+                Approved Identification Card
               </Text>
             </View>
           </TouchableOpacity>
         )}
 
+
+        {dl && DlApproved ? (
+          <TouchableOpacity>
+            <View style={tw`bg-white rounded-md mx-4 my-4 p-4`}>
+              <Image
+                source={{ uri: dl }}
+                style={{ width: '100%', height: 200, borderRadius: 8 }}
+                resizeMode="cover"
+              />
+              <Text style={tw`text-lg font-semibold mt-2`}>
+                Approved Driving License
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ) : (
         <TouchableOpacity onPress={handleOpenDrivingLicense}>
           <View style={tw`bg-white rounded-md mx-4 my-4 p-4`}>
             <View style={tw`flex-row items-center`}>
@@ -114,7 +160,7 @@ const DocumentManagementScreen = () => {
             <Text style={tw`text-lg font-semibold mt-2`}>Driving License</Text>
           </View>
         </TouchableOpacity>
-
+        )}
       </ScrollView>
     </View>
   );

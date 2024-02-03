@@ -127,7 +127,7 @@ function MenuScreen() {
             </Text>
           </TouchableOpacity>
           <View style={tw`flex-row items-center`}>
-            <Text style={tw`text-lg ml-2 mb-2`}>{person["rating"]}</Text>
+            <Text style={tw`text-lg ml-2 mb-2`}>Rating: {person["rating"]}</Text>
           </View>
         </View>
       </View>

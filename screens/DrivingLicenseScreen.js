@@ -18,6 +18,8 @@ import firebase from "firebase/compat/app";
 import "firebase/compat/storage";
 
 import { ActivityIndicator } from "react-native";
+import { useDispatch, useSelector } from "react-redux";
+import { selectPerson, setPerson } from "../slices/personSlice";
 
 const DrivingLicenseScreen = () => {
   const navigation = useNavigation();
@@ -30,6 +32,9 @@ const DrivingLicenseScreen = () => {
 
   const [imageError, setImageError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const person = useSelector(selectPerson);
+  console.log("Driving License Person: ", person)
 
   const handleGoBack = () => {
     navigation.goBack();
@@ -67,7 +72,7 @@ const DrivingLicenseScreen = () => {
 
     if (!pickerResult.canceled) {
       const imageUri = pickerResult.assets[0].uri;
-      const userUid = auth.currentUser.uid;
+      const userUid = person.authID;
       const timestamp = new Date().getTime();
 
       // Extract file extension from the image's URI
@@ -126,7 +131,7 @@ const DrivingLicenseScreen = () => {
       return;
     }
 
-    const userUid = auth.currentUser.uid;
+    const userUid = person.authID;
 
     try {
       const docRef = db.collection("drivingLicense").doc(userUid);
