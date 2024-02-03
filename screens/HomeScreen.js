@@ -19,6 +19,25 @@ import firebase from "firebase/compat/app";
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Create a Custom Avatar
+const CircularAvatar = ({ firstName }) => {
+  const generateRandomColor = () => {
+    const colors = ['#f5b505', '#08700a', '#040e91', '#910423']; // Add more colors as needed
+    const randomIndex = Math.floor(Math.random() * colors.length);
+    return colors[randomIndex];
+  };
+
+  const randomColor = generateRandomColor();
+
+  return (
+    <View style={[tw`w-10 h-10 rounded-full`, { backgroundColor: randomColor }]}>
+      <Text style={tw`text-lg font-bold text-white text-center`}>
+        {firstName.charAt(0)}
+      </Text>
+    </View>
+  );
+};
+
 
 const RequestCard = ({ request, onAcceptRequest }) => {
   const firstName = request.riderName.split(" ")[0];
@@ -33,10 +52,14 @@ const RequestCard = ({ request, onAcceptRequest }) => {
       <View style={tw`pt-4`}></View>
       <View style={tw`flex-row justify-between items-center `}>
         <View style={tw`flex-row items-center`}>
-          <Image
-            style={tw`w-10 h-10 rounded-full mr-2`}
-            source={{ uri: request.riderAvatar }}
-          />
+          {request.riderAvatar ? (
+            <Image
+              style={tw`w-10 h-10 rounded-full mr-2`}
+              source={{ uri: request.riderAvatar }}
+            />
+          ) : (
+            <CircularAvatar firstName={firstName} />
+          )}
           <Text style={tw`text-lg font-bold pl-2`}>{firstName}</Text>
         </View>
       </View>
