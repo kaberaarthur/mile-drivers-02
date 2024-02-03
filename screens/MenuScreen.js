@@ -16,6 +16,8 @@ import { useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
 import { selectUser, setUser } from "../slices/userSlice";
 import { selectPerson, setPerson } from "../slices/personSlice";
+import { selectCurrentRide, setCurrentRide } from "../slices/currentRideSlice"; // Update this path based on where your currentRideSlice isi located
+
 
 import { db, auth } from "../firebaseConfig"; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -25,6 +27,50 @@ function MenuScreen() {
   const dispatch = useDispatch();
   const person = useSelector(selectPerson);
   const [loading, setLoading] = useState(true);
+  const [goingRide, setGoingRide] = useState(false);
+
+  // Check if there is a ride in progress
+  useEffect(() => {
+    // Make sure person is loaded before proceeding
+    if (person) {
+      const fetchData = async () => {
+        try {
+          // Assuming you're using Firebase Firestore, replace with your database logic
+          const ridesRef = db.collection('rides');
+          const query = ridesRef
+            .where('rideStatus', '==', '3')
+            .where('driverId', '==', person.authID)
+            .orderBy('dateCreated', 'desc')
+            .limit(1);
+
+          const snapshot = await query.get();
+
+          if (!snapshot.empty) {
+            const rideData = snapshot.docs[0].data();
+            const updatedDateCreated = rideData.dateCreated.toDate().toISOString();
+
+            // Update the dateCreated field in the document data
+            const updatedRideData = {
+              ...rideData,
+              dateCreated: updatedDateCreated,
+            };
+
+            // Dispatch the new data to your Redux action
+            dispatch(setCurrentRide(updatedRideData));
+
+            // Set goingRide to true
+            setGoingRide(true);
+          }
+        } catch (error) {
+          console.error('Error fetching ride data:', error);
+        }
+      };
+
+      fetchData();
+    }
+  }, [dispatch, person]);
+  
+
 
   console.log("Person Data:", person["otpDate"]);
 
@@ -39,15 +85,6 @@ function MenuScreen() {
     console.log("Current Ride Data is Empty")
   }
 
-
-  /*
-  useEffect(() => {
-    if (person) {
-      console.log("Person data:", person);
-      // console.log("Formatted Date and Time:", person.dateRegistered);
-    }
-  }, [person]);
-  */
 
   const userData = {
     name: "John Doe",
@@ -112,15 +149,12 @@ function MenuScreen() {
       <View style={tw`flex-row mb-8`}>
         <Image
           style={tw`w-24 h-24 rounded-full`}
-          source={{ uri: "https://via.placeholder.com/100" }} // Replace with actual profile picture URL
+          source={{ uri: person["profilePicture"] }} 
+          // source={{ uri: "https://firebasestorage.googleapis.com/v0/b/mile-cab-app.appspot.com/o/documents%2Flicense%2F3tzxbg6yOyQEcVFRmj3JNlEKVRg1-1706993781149-lc.jpeg?alt=media&token=a2779e39-709f-4a3f-8681-eaf9fdbecd32" }}
+          // source={{ uri: "https://via.placeholder.com/100" }} // Replace with actual profile picture URL
         />
         <View style={tw`ml-4 pl-8`}>
           <Text style={tw`text-xl font-bold mb-2`}>{person["name"]}</Text>
-          <TouchableOpacity onPress={handleEditProfile}>
-            <Text style={[tw`text-lg mb-2`, { color: "#000" }]}>
-              Edit Profile
-            </Text>
-          </TouchableOpacity>
           <View style={tw`flex-row items-center`}>
             <Text style={tw`text-lg ml-2 mb-2`}>Rating: {person["rating"]}</Text>
           </View>
@@ -148,10 +182,10 @@ function MenuScreen() {
             </TouchableOpacity>
         ))}
 
-        {Object.keys(currentRideData).length > 0 && (
+        {goingRide && (
           <TouchableOpacity
             style={{ paddingVertical: 5, paddingHorizontal: 5, backgroundColor: '#F5B800', marginBottom: 10 }}
-            onPress={() => navigation.navigate("RideInProgressScreen")}
+            onPress={() => navigation.navigate("RideInProgressScreen", { ride: currentRideData })}
           >
             <Text style={tw`text-lg text-center font-bold text-gray-700`}>Ride in Progress</Text>
           </TouchableOpacity>
