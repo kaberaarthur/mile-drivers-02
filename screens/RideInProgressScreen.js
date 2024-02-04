@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   SafeAreaView,
   View,
@@ -9,31 +9,91 @@ import {
 //import { Icon } from "react-native-elements";
 import { Ionicons } from "@expo/vector-icons";
 import tw from "tailwind-react-native-classnames";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
 import { db, auth } from "../firebaseConfig"; // Import your Firebase config
 import firebase from "firebase/compat/app";
 import { setPerson, selectPerson } from "../slices/personSlice";
 import Modal from "react-native-modal";
 import StarRating from "react-native-star-rating";
+import { selectCurrentRide, setCurrentRide } from "../slices/currentRideSlice";
 
-const RideInProgress = () => {
+const RideInProgress = ({ route }) => {
   const navigation = useNavigation();
-  const currentRide = useSelector((state) => state.currentRide);
+  const dispatch = useDispatch();
   const person = useSelector(selectPerson);
   const [isRatingModalVisible, setRatingModalVisible] = useState(false);
   const [rating, setRating] = useState(0);
   const [driverBalance, setDriverBalance] = useState(0);
+  const [currentRideData, setCurrentRideData] = useState(0);
+
+  const [rideDataX, setRideDataX] = useState([]);
+  const [rideDocID, setRideDocID] = useState([]);
+
+  const { rideDataY } = route.params;
 
   console.log("The Driver", person);
 
-  // Use useSelector hook to select the data from the currentRideSlice
-  const currentRideData = useSelector((state) => state.currentRide);
+
+  // useEffect to Manually get the ride Data from the DB
+  // Check if there is a ride in progress
+  useEffect(() => {
+    // Make sure person is loaded before proceeding
+    console.log('useEffect is being called');
+
+    if (person) {
+      const fetchData = async () => {
+        try {
+          // Assuming you're using Firebase Firestore, replace with your database logic
+          const ridesRef = db.collection('rides');
+          const query = ridesRef
+            .where('rideStatus', '==', '3')
+            .where('driverId', '==', person.authID)
+            .orderBy('dateCreated', 'desc')
+            .limit(1);
+
+          const snapshot = await query.get();
+
+          if (!snapshot.empty) {
+            console.log("It's Working")
+            const rideData = snapshot.docs[0].data();
+            console.log('!!!!!#### - ', rideData)
+            const updatedDateCreated = rideData.dateCreated.toDate().toISOString();
+
+            // Update the dateCreated field in the document data
+            const updatedRideData = {
+              ...rideData,
+              dateCreated: updatedDateCreated,
+              rideId: snapshot.docs[0].id,
+            };
+
+            console.log("%%%%% - ", snapshot.docs[0].id)
+
+            // Dispatch the new data to your Redux action
+            dispatch(setCurrentRide(updatedRideData));
+
+            setCurrentRideData(updatedRideData)
+            setRideDocID(snapshot.docs[0].id)
+
+            console.log("&&&*^^^)() - ", rideDocID)
+          }
+        } catch (error) {
+          console.log('Error fetching ride data:', error);
+        }
+      };
+
+      fetchData();
+    }
+  }, [dispatch, person]);
+
+  useEffect(() => {
+    console.log("The Ride ID***: ", rideDocID)
+  }, [rideDocID]);
 
   // Drop Off Code
   const handleDropOff = () => {
     // Get the ride ID
-    const rideId = currentRideData["currentRide"]["id"];
+    const rideId = rideDocID;
 
     // Update Firestore document
     db.collection("rides")
@@ -68,7 +128,7 @@ const RideInProgress = () => {
 
             // If a Deduction was applied on the Ride
             const rideDeduction =
-              currentRideData["currentRide"]["totalDeduction"];
+              currentRideData["totalDeduction"];
             const balAfterDeduction = 0.85 * parseInt(rideDeduction);
 
             const updatedBalance = balAfterDeduction + currentBalance;
@@ -76,7 +136,7 @@ const RideInProgress = () => {
             // Check if Payment type is not Cash and Add Amount to Balance
             // Afterwards, Create a Payment Transactions Document
             const paymentMethodId = parseInt(
-              currentRideData["currentRide"]["paymentMethod"]["id"]
+              currentRideData["paymentMethod"]["id"]
             );
 
             if (paymentMethodId === 1) {
@@ -84,10 +144,10 @@ const RideInProgress = () => {
               // Deduction + (Total Commission)
               const totalCommission =
                 -parseInt(
-                  currentRideData["currentRide"]["totalFareBeforeDeduction"]
+                  currentRideData["totalFareBeforeDeduction"]
                 ) * 0.15;
               const deduction = parseInt(
-                currentRideData["currentRide"]["totalDeduction"]
+                currentRideData["totalDeduction"]
               );
 
               const driverDues = totalCommission + deduction;
@@ -97,10 +157,10 @@ const RideInProgress = () => {
               console.log("Mile Owes the Driver: " + driverDues);
 
               /*
-              console.log("Ride ID: " + currentRideData["currentRide"]["id"]);
-              console.log("Ride ID: " + currentRideData["currentRide"]["id"]);
-              console.log("Ride ID: " + currentRideData["currentRide"]["id"]);
-              console.log("Ride ID: " + currentRideData["currentRide"]["id"]);
+              console.log("Ride ID: " + currentRideData["id"]);
+              console.log("Ride ID: " + currentRideData["id"]);
+              console.log("Ride ID: " + currentRideData["id"]);
+              console.log("Ride ID: " + currentRideData["id"]);
               */
 
               // Create a Document to Record this Financial Transaction
@@ -108,17 +168,17 @@ const RideInProgress = () => {
 
               // Define the data for the document
               const financeData = {
-                driverId: currentRideData["currentRide"]["driverId"],
+                driverId: currentRideData["driverId"],
                 paymentType:
-                  currentRideData["currentRide"]["paymentMethod"]["id"],
-                rideId: currentRideData["currentRide"]["id"],
-                riderId: currentRideData["currentRide"]["riderId"],
+                  currentRideData["paymentMethod"]["id"],
+                rideId: rideDocID,
+                riderId: currentRideData["riderId"],
                 totalAmount:
-                  currentRideData["currentRide"]["totalFareBeforeDeduction"], // Replace with your values
+                  currentRideData["totalFareBeforeDeduction"], // Replace with your values
                 totalClientPays:
-                  currentRideData["currentRide"]["totalClientPays"], // Replace with your values
+                  currentRideData["totalClientPays"], // Replace with your values
                 totalDeduction:
-                  currentRideData["currentRide"]["totalDeduction"], // Replace with your values
+                  currentRideData["totalDeduction"], // Replace with your values
                 driverRevenue: driverDues, // Replace with your values
                 paid: false, // Replace with your values
                 date: firebase.firestore.FieldValue.serverTimestamp(), // Use Firestore Timestamp
@@ -138,14 +198,14 @@ const RideInProgress = () => {
               // Deduction + (Total Commission)
               const totalCommission =
                 -parseInt(
-                  currentRideData["currentRide"]["totalFareBeforeDeduction"]
+                  currentRideData["totalFareBeforeDeduction"]
                 ) * 0.15;
               const deduction = parseInt(
-                currentRideData["currentRide"]["totalDeduction"]
+                currentRideData["totalDeduction"]
               );
               const totalAfterDeduction =
                 parseInt(
-                  currentRideData["currentRide"]["totalFareBeforeDeduction"]
+                  currentRideData["totalFareBeforeDeduction"]
                 ) - deduction;
               const driverDues =
                 totalCommission + deduction + totalAfterDeduction;
@@ -156,10 +216,10 @@ const RideInProgress = () => {
               console.log("Mile Owes the Driver: " + driverDues);
 
               /*
-              console.log("Ride ID: " + currentRideData["currentRide"]["id"]);
-              console.log("Ride ID: " + currentRideData["currentRide"]["id"]);
-              console.log("Ride ID: " + currentRideData["currentRide"]["id"]);
-              console.log("Ride ID: " + currentRideData["currentRide"]["id"]);
+              console.log("Ride ID: " + currentRideData["id"]);
+              console.log("Ride ID: " + currentRideData["id"]);
+              console.log("Ride ID: " + currentRideData["id"]);
+              console.log("Ride ID: " + currentRideData["id"]);
               */
 
               // Create a Document to Record this Financial Transaction
@@ -167,17 +227,17 @@ const RideInProgress = () => {
 
               // Define the data for the document
               const financeData = {
-                driverId: currentRideData["currentRide"]["driverId"],
+                driverId: currentRideData["driverId"],
                 paymentType:
-                  currentRideData["currentRide"]["paymentMethod"]["id"],
-                rideId: currentRideData["currentRide"]["id"],
-                riderId: currentRideData["currentRide"]["riderId"],
+                  currentRideData["paymentMethod"]["id"],
+                rideId: rideDocID,
+                riderId: currentRideData["riderId"],
                 totalAmount:
-                  currentRideData["currentRide"]["totalFareBeforeDeduction"], // Replace with your values
+                  currentRideData["totalFareBeforeDeduction"], // Replace with your values
                 totalClientPays:
-                  currentRideData["currentRide"]["totalClientPays"], // Replace with your values
+                  currentRideData["totalClientPays"], // Replace with your values
                 totalDeduction:
-                  currentRideData["currentRide"]["totalDeduction"], // Replace with your values
+                  currentRideData["totalDeduction"], // Replace with your values
                 driverRevenue: driverDues, // Replace with your values
                 paid: false, // Replace with your values
                 date: firebase.firestore.FieldValue.serverTimestamp(), // Use Firestore Timestamp
@@ -238,9 +298,9 @@ const RideInProgress = () => {
   // Report Code
   const handleReportRide = () => {
     // Get the ride ID
-    const rideId = currentRideData["currentRide"]["id"];
+    const rideId = rideDocID;
 
-    console.log("Ride Data: ", currentRideData["currentRide"]);
+    console.log("Ride Data: ", currentRideData);
 
     // Update Firestore document
     db.collection("rides")
@@ -262,10 +322,10 @@ const RideInProgress = () => {
           driverEmail: person["email"],
           driverPhone: person["phone"],
           driverName: person["name"],
-          riderAuthID: currentRideData["currentRide"]["riderId"],
-          riderPhone: currentRideData["currentRide"]["riderPhone"],
-          riderName: currentRideData["currentRide"]["riderPhone"],
-          rideId: currentRideData["currentRide"]["id"],
+          riderAuthID: currentRideData["riderId"],
+          riderPhone: currentRideData["riderPhone"],
+          riderName: currentRideData["riderPhone"],
+          rideId: rideDocID,
           resolved: false,
           issue: "Driver has reported a ride In Progress",
           timeReported: firebase.firestore.Timestamp.fromDate(new Date()),
@@ -329,7 +389,7 @@ const RideInProgress = () => {
     console.log("Selected Rating:", rating);
 
     // Take Existing Rating, Find the Mean
-    const currentRating = currentRideData["currentRide"]["riderRating"];
+    const currentRating = currentRideData["riderRating"];
     const newRating = roundToDecimal(
       (parseFloat(currentRating) + parseFloat(rating)) / 2,
       1
@@ -340,7 +400,7 @@ const RideInProgress = () => {
         roundToDecimal((parseFloat(currentRating) + parseFloat(rating)) / 2, 1)
     );
 
-    const riderAuthID = currentRideData["currentRide"]["riderId"];
+    const riderAuthID = currentRideData["riderId"];
     updateRiderRatingByAuthID(riderAuthID, newRating);
 
     // Close the modal after rating
@@ -369,7 +429,9 @@ const RideInProgress = () => {
               source={{ uri: "https://links.papareact.com/3pn" }}
             />
             <Text style={tw`ml-4 text-lg font-bold`}>
-              {currentRideData["currentRide"]["riderName"]}
+              {currentRideData && currentRideData["riderName"]
+                ? currentRideData["riderName"]
+                : "Rider Name Not Available"}
             </Text>
           </View>
 
@@ -377,35 +439,41 @@ const RideInProgress = () => {
           <View style={tw`mb-5`}>
             <Text style={tw`text-sm font-bold text-gray-400`}>PICK UP</Text>
             <Text style={tw`text-lg`}>
-              {currentRideData["currentRide"]["rideOrigin"][0]["description"]}
+              {currentRideData &&
+                currentRideData["rideOrigin"] &&
+                currentRideData["rideOrigin"][0] &&
+                currentRideData["rideOrigin"][0]["description"]
+                ? currentRideData["rideOrigin"][0]["description"]
+                : "Pickup Location Not Available"}
             </Text>
           </View>
           <View style={tw`mb-5`}>
             <Text style={tw`text-sm font-bold text-gray-400`}>DROP OFF</Text>
             <Text style={tw`text-lg`}>
               {
-                currentRideData["currentRide"]["rideDestination"][0][
-                  "description"
-                ]
+                currentRideData?.rideDestination?.[0]?.description || "Destination Not Available"
               }
             </Text>
           </View>
           <View style={tw`flex-row justify-between mb-5`}>
             <Text style={tw`text-sm font-bold`}>Client Pays:</Text>
             <Text style={tw`text-sm`}>
-              Kshs {currentRideData["currentRide"]["totalClientPays"]}
+              Kshs {currentRideData?.totalClientPays || "Amount Not Available"}
             </Text>
           </View>
           <View style={tw`flex-row justify-between mb-5`}>
             <Text style={tw`text-sm font-bold`}>Discount:</Text>
             <Text style={tw`text-sm`}>
-              Kshs {currentRideData["currentRide"]["totalDeduction"]}
+              Kshs {currentRideData?.totalDeduction}
+            </Text>
+            <Text style={tw`text-sm`}>
+              Kshs {currentRideData?.totalDeduction}
             </Text>
           </View>
           <View style={tw`flex-row justify-between mb-5`}>
             <Text style={tw`text-sm font-bold`}>Ride Total:</Text>
             <Text style={tw`text-sm font-bold`}>
-              Kshs {currentRideData["currentRide"]["totalFareBeforeDeduction"]}
+              Kshs {currentRideData?.totalFareBeforeDeduction}
             </Text>
           </View>
 

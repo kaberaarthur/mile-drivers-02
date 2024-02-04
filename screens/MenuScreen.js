@@ -53,6 +53,7 @@ function MenuScreen() {
             const updatedRideData = {
               ...rideData,
               dateCreated: updatedDateCreated,
+              rideId: snapshot.docs[0].id,
             };
 
             // Dispatch the new data to your Redux action
@@ -62,7 +63,7 @@ function MenuScreen() {
             setGoingRide(true);
           }
         } catch (error) {
-          console.error('Error fetching ride data:', error);
+          console.log('Error fetching ride data:', error);
         }
       };
 
@@ -98,7 +99,6 @@ function MenuScreen() {
   };
 
   const menuItems = [
-
     {
       name: "Notifications", 
       icon: "notifications",
@@ -185,7 +185,7 @@ function MenuScreen() {
         {goingRide && (
           <TouchableOpacity
             style={{ paddingVertical: 5, paddingHorizontal: 5, backgroundColor: '#F5B800', marginBottom: 10 }}
-            onPress={() => navigation.navigate("RideInProgressScreen", { ride: currentRideData })}
+            onPress={() => navigation.navigate("RideInProgressScreen", { rideDataY: currentRideData })}
           >
             <Text style={tw`text-lg text-center font-bold text-gray-700`}>Ride in Progress</Text>
           </TouchableOpacity>

@@ -15,6 +15,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
 
 import { db, auth } from "../firebaseConfig";
+import firebase from "firebase/compat/app";
 import { setUser } from "../slices/userSlice";
 import { setPerson } from "../slices/personSlice";
 
@@ -22,18 +23,26 @@ const UpdateProfileScreen = ({ navigation, route }) => {
   // const navigation = useNavigation();
   const dispatch = useDispatch();
 
-  const { phoneNumber, expectedCode } = route.params;
+  const { phoneNumber, riderProfileID } = route.params;
   const [profilePicture, setProfilePicture] = useState(null);
+  const [photo, setPhoto] = useState(null);
   const [riderName, setRiderName] = useState("");
   const [riderEmail, setRiderEmail] = useState("");
-  const [riderProfileID, setRiderProfileID] = useState(0);
+  // const [riderProfileID, setRiderProfileID] = useState(0);
   const [updatedProfile, setUpdatedProfile] = useState(0);
   const [authID, setAuthID] = useState(0);
   const [lastNumber, setLastNumber] = useState(0);
   const [generatedPassword, setGeneratedPassword] = useState(0);
 
+  const [downloadURL, setDownloadURL] = useState("");
+  const [iDFileName, setIDFileName] = useState("");
+  const [imageError, setImageError] = useState("");
+
+
   // Check if User Has Been Created
   const [userCreated, setUserCreated] = useState(false);
+
+  console.log("####### Rider Profile ID ######: ", riderProfileID)
 
   // Generate a Random Password
   function generatePassword() {
@@ -91,6 +100,57 @@ const UpdateProfileScreen = ({ navigation, route }) => {
     }
   };
 
+  // New Photo Upload Function
+  const handlePhotoUpload = async () => {
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (permissionResult.granted === false) {
+      console.log("Permission to access camera roll is required!");
+      return;
+    }
+
+    const pickerResult = await ImagePicker.launchImageLibraryAsync();
+
+    if (!pickerResult.canceled) {
+      const imageUri = pickerResult.assets[0].uri;
+      const userUid = phoneNumber;
+      const timestamp = new Date().getTime();
+
+      // Extract file extension from the image's URI
+      const fileExtension = imageUri.split(".").pop();
+      const filename = `${userUid}-${timestamp}-nid.${fileExtension}`;
+
+      setPhoto(pickerResult.assets[0].uri);
+      setProfilePicture(pickerResult.assets[0].uri);
+      setIDFileName(filename);
+      console.log("File Name: " + filename);
+
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+
+      const storageRef = firebase
+        .storage()
+        .ref()
+        .child(`documents/driver-profile-pictures/${filename}`);
+
+      try {
+        await storageRef.put(blob);
+        console.log("Image uploaded successfully");
+
+        // Get the download URL of the uploaded file
+        const downloadLink = await storageRef.getDownloadURL();
+        console.log("Download Link:", downloadLink);
+
+        // Now you can use the downloadURL as needed, for example, store it in a state
+        setDownloadURL(downloadLink);
+      } catch (error) {
+        console.error("Error uploading image: ", error);
+        setImageError(error.message);
+      }
+    }
+  };
+
   useEffect(() => {
     // Generate the Password
     setGeneratedPassword(generatePassword());
@@ -102,23 +162,63 @@ const UpdateProfileScreen = ({ navigation, route }) => {
 
   const handleSubmit = async () => {
     try {
-      const riderRef = db
-        .collection("drivers")
-        .where("phone", "==", phoneNumber);
-      const querySnapshot = await riderRef.get();
-      const riderIDS = [];
+      // Create Firebase User
+      auth
+        .createUserWithEmailAndPassword(riderEmail, generatedPassword)
+        .then((userCredential) => {
+          var user = userCredential.user;
+          console.log("New User: " + user.uid);
+          setAuthID(user.uid);
+        })
+        .catch((error) => {
+          var errorCode = error.code;
+          var errorMessage = error.message;
+          console.log("Error Creating User: " + errorMessage);
+        });
 
-      querySnapshot.forEach((doc) => {
-        riderIDS.push(doc.id);
-      });
 
-      setRiderProfileID(riderIDS[0]);
-      console.log(riderProfileID);
+      // Call the function that needs the updated riderProfileID
+      var theRiderRef = db.collection("drivers").doc(riderProfileID);
+
+      const newDriverData = {
+        email: riderEmail,
+        name: riderName,
+        password: generatedPassword,
+        authID: riderProfileID,
+        activeUser: false,
+        partnerCode: lastNumber,
+        referralCode: "",
+        profilePicture: downloadURL,
+        rating: "5.0"
+      };
+
+      theRiderRef
+        .update(newDriverData)
+        .then(() => {
+          console.log("Rider Profile Updated Now!");
+          setUserCreated(true);
+
+          // Change dateRegistered to String
+          const updatedDateRegistered = rideData.dateRegistered.toDate().toISOString();
+
+          // Update the dateCreated field in the document data
+          const updatedDriverData = {
+            ...newDriverData,
+            dateRegistered: updatedDateRegistered,
+          };
+
+
+          dispatch(setPerson(updatedDriverData));
+        })
+        .catch((error) => {
+          console.log("Error getting document:", error);
+        });
     } catch (error) {
-      console.log("Error getting documents: ", error);
+      console.log("Error getting Driver documents: ", error);
     }
   };
 
+  /*
   useEffect(() => {
     if (riderProfileID && generatedPassword) {
       auth
@@ -135,6 +235,7 @@ const UpdateProfileScreen = ({ navigation, route }) => {
         });
     }
   }, [riderProfileID, generatedPassword]); // Run when both riderProfileID and generatedPassword change
+  */
 
   // Create a combination of two items, day of the Week and Milliseconds
   const getDayAndTime = () => {
@@ -194,31 +295,37 @@ const UpdateProfileScreen = ({ navigation, route }) => {
     }
   }, [authID]);
 
+  /*
   // Update the User Profile Document
   useEffect(() => {
     if (lastNumber) {
       // Call the function that needs the updated riderProfileID
       var theRiderRef = db.collection("drivers").doc(riderProfileID);
 
+      const newDriverData = {
+        email: riderEmail,
+        name: riderName,
+        password: generatedPassword,
+        authID: authID,
+        activeUser: false,
+        partnerCode: lastNumber,
+        referralCode: "",
+        profilePicture: downloadURL,
+      };
+
       theRiderRef
-        .update({
-          email: riderEmail,
-          name: riderName,
-          password: generatedPassword,
-          authID: authID,
-          activeUser: true,
-          partnerCode: lastNumber,
-          referralCode: "",
-        })
+        .update(newDriverData)
         .then(() => {
           console.log("Rider Profile Updated Now!");
           setUserCreated(true);
+          dispatch(setPerson(newDriverData));
         })
         .catch((error) => {
           console.log("Error getting document:", error);
         });
     }
-  }, [lastNumber]);
+  }, [lastNumber, dispatch]);
+  */
 
   // Check if AuthID is Set
   useEffect(() => {
@@ -237,9 +344,18 @@ const UpdateProfileScreen = ({ navigation, route }) => {
         .then((doc) => {
           if (doc.exists) {
             console.log("The Profile data:", doc.data());
+            const theProfileData = doc.data();
+            const updatedOtpDate = theProfileData.otpDate.toDate().toISOString();
+            const updatedDateRegistered = theProfileData.dateRegistered.toDate().toISOString();
+
+            const updatedProfileData = {
+              ...theProfileData,
+              otpDate: updatedOtpDate,
+              dateRegistered: updatedDateRegistered,
+            };
 
             // Store the Person to the Person Store
-            dispatch(setPerson(doc.data()));
+            dispatch(setPerson(updatedProfileData));
           } else {
             // doc.data() will be undefined in this case
             console.log("No such document!");
@@ -269,7 +385,7 @@ const UpdateProfileScreen = ({ navigation, route }) => {
       {/* Profile Picture */}
       <TouchableOpacity
         style={tw`flex items-center justify-center`}
-        onPress={handleProfilePictureUpload}
+        onPress={handlePhotoUpload}
       >
         {profilePicture ? (
           <Image

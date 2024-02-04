@@ -18,7 +18,7 @@ const RequestCard = ({ request }) => {
 
   const handleAcceptRequest = () => {
     navigation.navigate("OneRequestScreen", { ride: request });
-    console.log(request.rideID);
+    console.log("!!!!!!!!!!", request.rideID);
   };
 
   return (

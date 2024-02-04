@@ -422,7 +422,7 @@ const FinanceScreen = () => {
   const renderRideCard = (ride) => {
     return (
       <TouchableOpacity onPress={() => copyToClipboard(ride.rideId)}>
-        <View key={ride.rideId} style={tw`bg-white p-4 mb-4`}>
+        <View key={`${ride.rideId}-${Date.now()}`} style={tw`bg-white p-4 mb-4`}>
           <Text style={tw`text-gray-900 text-lg font-bold mb-1`}>
             Ride: {ride.rideId}
           </Text>

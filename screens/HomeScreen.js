@@ -187,6 +187,9 @@ const HomeScreen = () => {
         AsyncStorage.setItem('user', JSON.stringify(authUser));
       } else {
         AsyncStorage.removeItem('user');
+
+        // If no user exists, navigate to SignUpScreen
+        navigation.navigate('SignUpScreen');
       }
 
       console.log("The Current User: ", authUser);

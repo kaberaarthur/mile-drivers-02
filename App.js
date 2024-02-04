@@ -30,6 +30,8 @@ import DrivingLicenseScreen from "./screens/DrivingLicenseScreen";
 import InsuranceStickerScreen from "./screens/InsuranceStickerScreen";
 import IDCardScreen from "./screens/IDCardScreen";
 
+import TestScreen from "./screens/TestScreen";
+
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import "react-native-gesture-handler";
 import { NavigationContainer } from "@react-navigation/native";
@@ -59,6 +61,13 @@ export default function App() {
               <Stack.Screen
                 name="SignUpScreen"
                 component={SignUpScreen}
+                options={{
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="TestScreen"
+                component={TestScreen}
                 options={{
                   headerShown: false,
                 }}

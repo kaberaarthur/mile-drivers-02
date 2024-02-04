@@ -18,6 +18,7 @@ const SignUpScreen = () => {
   const navigation = useNavigation();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [firstDocID, setFirstDocID] = useState("");
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -48,6 +49,29 @@ const SignUpScreen = () => {
     console.log("Sending OTP Now");
   };
 
+  function getDriverByPhoneNumber(phoneNumber) {
+    const driversCollection = db.collection("drivers");
+  
+    driversCollection
+      .where("phone", "==", phoneNumber)
+      .get()
+      .then((querySnapshot) => {
+        if (querySnapshot.empty) {
+          console.log("No matching documents found.");
+          return;
+        }
+  
+        querySnapshot.forEach((doc) => {
+          console.log("#### Check Here #### - ", doc.id);
+          setFirstDocID(doc.id);
+          // Access other fields if needed: doc.data().fieldName
+        });
+      })
+      .catch((error) => {
+        console.error("Error getting documents: ", error);
+      });
+  };
+
   const handleSignIn = () => {
     const expectedCode = generateRandomCode();
 
@@ -59,8 +83,9 @@ const SignUpScreen = () => {
         .then((querySnapshot) => {
           if (querySnapshot.empty) {
             // No existing document found, proceed with creating a new one
-            db.collection("drivers")
-              .doc()
+            const newDocRef = db.collection("drivers").doc();
+
+            newDocRef
               .set({
                 dateRegistered: firebase.firestore.FieldValue.serverTimestamp(),
                 email: "",
@@ -75,6 +100,11 @@ const SignUpScreen = () => {
               .then(() => {
                 console.log("Document successfully written!");
                 console.log("OTP: " + expectedCode);
+
+                // setFirstDocID(docRef.id);
+                // console.log("#### Check Here #### - ", firstDocID);
+
+                getDriverByPhoneNumber(phoneNumber)
 
                 // Send the OTP Code
                 sendOTP();
@@ -91,8 +121,11 @@ const SignUpScreen = () => {
                   otpCode: expectedCode,
                 })
                 .then(() => {
-                  console.log("Document successfully updated!");
+                  
                   console.log("OTP: " + expectedCode);
+
+                  setFirstDocID(doc.id);
+                  console.log("#### Successful Update #### ", firstDocID);
 
                   // Write the Code to send the OTP Here
                   sendOTP();
@@ -111,6 +144,7 @@ const SignUpScreen = () => {
       navigation.navigate("ConfirmCodeScreen", {
         phoneNumber: phoneNumber,
         expectedCode: expectedCode,
+        firstDocID: firstDocID,
       });
     }
   };

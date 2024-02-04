@@ -28,11 +28,15 @@ const ConfirmCodeScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
   const person = useSelector(selectPerson);
 
-  const { phoneNumber, expectedCode } = route.params;
+  const { phoneNumber, expectedCode, firstDocID } = route.params;
   const [code, setCode] = useState("");
   const [isValidCode, setIsValidCode] = useState(true);
   const [profile, setProfile] = useState([]);
   const [updateProfile, setUpdateProfile] = useState("");
+  
+  
+  console.log("##*****## - ", firstDocID)
+
 
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -68,13 +72,12 @@ const ConfirmCodeScreen = ({ navigation, route }) => {
       personRef
         .get()
         .then((querySnapshot) => {
-          if (!querySnapshot.empty) {
+          // Get the first document's data
+          const firstDocument = querySnapshot.docs[0];
+          const firstDocumentData = firstDocument.data();
+
+          if (firstDocumentData.email) {
             // This means the User Profile Exists
-
-            // Get the first document's data
-            const firstDocument = querySnapshot.docs[0];
-            const firstDocumentData = firstDocument.data();
-
             // Add the document ID as a field in the data object
             firstDocumentData.id = firstDocument.id;
 
@@ -114,7 +117,7 @@ const ConfirmCodeScreen = ({ navigation, route }) => {
 
                 console.log("The Person: ", person);
 
-                navigation.navigate("HomeScreen");
+                navigation.navigate('HomeScreen');
               })
               .catch((error) => {
                 var errorCode = error.code;
@@ -128,9 +131,11 @@ const ConfirmCodeScreen = ({ navigation, route }) => {
             console.log("No Documents Found in the Drivers Collection");
             setErrorMessage("No User Exists for that Phone Number");
 
+            console.log("################# - ", firstDocID)
+
             // Send the User to Update their Profile Info
             navigation.navigate("UpdateProfileScreen", {
-              phoneNumber: phoneNumber,
+              phoneNumber: phoneNumber, riderProfileID: firstDocID
             });
           }
         })
