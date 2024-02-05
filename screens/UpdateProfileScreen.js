@@ -42,6 +42,8 @@ const UpdateProfileScreen = ({ navigation, route }) => {
   // Check if User Has Been Created
   const [userCreated, setUserCreated] = useState(false);
 
+  const [submitError, setSubmitError] = useState(false);
+
   console.log("####### Rider Profile ID ######: ", riderProfileID)
 
   // Generate a Random Password
@@ -161,81 +163,73 @@ const UpdateProfileScreen = ({ navigation, route }) => {
   }, [generatedPassword]);
 
   const handleSubmit = async () => {
+    // Check for missing details
+    if (!riderEmail || !riderName || !downloadURL) {
+      // Set submitError to true if any detail is missing
+      setSubmitError(true);
+      console.log("Missing details: Cannot proceed with submission.");
+      return; // Exit the function early
+    }
+  
+    // If details are present, proceed and set submitError to false
+    setSubmitError(false);
+  
     try {
       // Create Firebase User
-      auth
-        .createUserWithEmailAndPassword(riderEmail, generatedPassword)
+      auth.createUserWithEmailAndPassword(riderEmail, generatedPassword)
         .then((userCredential) => {
           var user = userCredential.user;
           console.log("New User: " + user.uid);
-          setAuthID(user.uid);
-        })
-        .catch((error) => {
-          var errorCode = error.code;
-          var errorMessage = error.message;
-          console.log("Error Creating User: " + errorMessage);
-        });
-
-
-      // Call the function that needs the updated riderProfileID
-      var theRiderRef = db.collection("drivers").doc(riderProfileID);
-
-      const newDriverData = {
-        email: riderEmail,
-        name: riderName,
-        password: generatedPassword,
-        authID: riderProfileID,
-        activeUser: false,
-        partnerCode: lastNumber,
-        referralCode: "",
-        profilePicture: downloadURL,
-        rating: "5.0"
-      };
-
-      theRiderRef
-        .update(newDriverData)
-        .then(() => {
-          console.log("Rider Profile Updated Now!");
-          setUserCreated(true);
-
-          // Change dateRegistered to String
-          const updatedDateRegistered = rideData.dateRegistered.toDate().toISOString();
-
-          // Update the dateCreated field in the document data
-          const updatedDriverData = {
-            ...newDriverData,
-            dateRegistered: updatedDateRegistered,
+          setAuthID(user.uid); // Assuming this updates riderProfileID or related state
+  
+          // Assuming riderProfileID is updated outside this block and used here
+          var theRiderRef = db.collection("drivers").doc(riderProfileID);
+          const newDriverData = {
+            email: riderEmail,
+            name: riderName,
+            password: generatedPassword,
+            authID: riderProfileID, // Ensure this is intended to use riderProfileID and not user.uid
+            activeUser: false,
+            partnerCode: lastNumber, // Ensure lastNumber is defined and available
+            referralCode: "",
+            profilePicture: downloadURL,
+            rating: "5.0"
           };
-
-
-          dispatch(setPerson(updatedDriverData));
+  
+          theRiderRef.update(newDriverData)
+            .then(() => {
+              console.log("Rider Profile Updated Now!");
+              setUserCreated(true); // Assuming this sets a state indicating the user creation status
+  
+              // Assuming rideData and driverDocument are available and have a toDate method
+              // const updatedDateRegistered = newDriverData.dateRegistered.toDate().toISOString();
+              // const updatedOtpDate = newDriverData.otpDate.toDate().toISOString();
+  
+              const updatedDriverData = {
+                ...newDriverData,
+                // dateRegistered: updatedDateRegistered,
+                // otpDate: updatedOtpDate,
+              };
+  
+              dispatch(setPerson(updatedDriverData));
+            })
+            .catch((error) => {
+              console.error("Error updating driver profile:", error);
+            });
         })
         .catch((error) => {
-          console.log("Error getting document:", error);
+          var errorMessage = error.message;
+          console.error("Error Creating User: " + errorMessage);
+          // Optionally, set submitError to true if Firebase user creation fails
+          setSubmitError(true);
         });
     } catch (error) {
-      console.log("Error getting Driver documents: ", error);
+      console.error("Error in submission process: ", error);
+      setSubmitError(true); // Set submitError to true if any error occurs
     }
   };
+  
 
-  /*
-  useEffect(() => {
-    if (riderProfileID && generatedPassword) {
-      auth
-        .createUserWithEmailAndPassword(riderEmail, generatedPassword)
-        .then((userCredential) => {
-          var user = userCredential.user;
-          console.log("New User: " + user.uid);
-          setAuthID(user.uid);
-        })
-        .catch((error) => {
-          var errorCode = error.code;
-          var errorMessage = error.message;
-          console.log("Error Creating User: " + errorMessage);
-        });
-    }
-  }, [riderProfileID, generatedPassword]); // Run when both riderProfileID and generatedPassword change
-  */
 
   // Create a combination of two items, day of the Week and Milliseconds
   const getDayAndTime = () => {
@@ -295,37 +289,6 @@ const UpdateProfileScreen = ({ navigation, route }) => {
     }
   }, [authID]);
 
-  /*
-  // Update the User Profile Document
-  useEffect(() => {
-    if (lastNumber) {
-      // Call the function that needs the updated riderProfileID
-      var theRiderRef = db.collection("drivers").doc(riderProfileID);
-
-      const newDriverData = {
-        email: riderEmail,
-        name: riderName,
-        password: generatedPassword,
-        authID: authID,
-        activeUser: false,
-        partnerCode: lastNumber,
-        referralCode: "",
-        profilePicture: downloadURL,
-      };
-
-      theRiderRef
-        .update(newDriverData)
-        .then(() => {
-          console.log("Rider Profile Updated Now!");
-          setUserCreated(true);
-          dispatch(setPerson(newDriverData));
-        })
-        .catch((error) => {
-          console.log("Error getting document:", error);
-        });
-    }
-  }, [lastNumber, dispatch]);
-  */
 
   // Check if AuthID is Set
   useEffect(() => {
@@ -396,6 +359,7 @@ const UpdateProfileScreen = ({ navigation, route }) => {
           <View
             style={tw`w-40 h-40 bg-gray-300 rounded-full items-center justify-center`}
           >
+            <Text style={tw`text-4xl text-black`}>+</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -429,6 +393,13 @@ const UpdateProfileScreen = ({ navigation, route }) => {
       >
         <Text style={tw`text-gray-900 text-lg font-semibold`}>Submit</Text>
       </TouchableOpacity>
+
+      {submitError && (
+        <Text style={tw`text-red-700 text-sm py-4`}>
+          You must fill All Details to Submit including a Profile Picture
+        </Text>
+      )}
+
     </SafeAreaView>
   );
 };

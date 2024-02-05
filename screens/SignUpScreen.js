@@ -10,6 +10,10 @@ import {
 } from "react-native";
 import tw from "tailwind-react-native-classnames";
 import { useNavigation } from "@react-navigation/native";
+import { useDispatch, useSelector } from "react-redux";
+import { selectPerson, setPerson } from "../slices/personSlice";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 import { db, auth } from "../firebaseConfig";
 import firebase from "firebase/compat/app";
@@ -19,6 +23,58 @@ const SignUpScreen = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [firstDocID, setFirstDocID] = useState("");
+  const dispatch = useDispatch();
+
+  const person = useSelector(selectPerson);
+
+  useEffect(() => {
+    let isMounted = true; // Flag to manage async operations
+  
+    const initializeAuth = async () => {
+      try {
+        // Attempt to retrieve the user from AsyncStorage
+        const storedUser = await AsyncStorage.getItem('user');
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          console.log("#### A USER EXISTS ####");
+          console.log('User UID :', parsedUser.uid);
+
+          navigation.navigate('HomeScreen');
+        } 
+  
+        // Set up auth state listener
+        const unsubscribe = auth.onAuthStateChanged(async (authUser) => {
+          if (!isMounted) return; // Avoid state updates if component unmounted
+  
+          if (authUser) {
+            // User is signed in; update AsyncStorage and app state
+            await AsyncStorage.setItem('user', JSON.stringify(authUser));
+            console.log("######################");
+            console.log("The Current User: ", authUser);
+            console.log("######################");
+            
+            navigation.navigate('HomeScreen');
+          } else if (!storedUser) {
+            // No user in storage and no authUser; direct to SignUpScreen
+            console.log("No User Detected - Remain on SignUpScreen");
+          }
+          setLoading(false); // Update loading state
+        });
+  
+        // Return the unsubscribe function to be called on cleanup
+        return () => {
+          isMounted = false; // Prevent updates after unmount
+          unsubscribe(); // Unsubscribe from auth listener
+        };
+      } catch (error) {
+        console.error('Error initializing app state:', error);
+        setLoading(false);
+      }
+    };
+  
+    initializeAuth();
+  }, [dispatch, navigation]);
+
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -29,13 +85,6 @@ const SignUpScreen = () => {
     // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
-
-  useEffect(() => {
-    if (user) {
-      // Redirect to HomeScreen when a user is logged in
-      navigation.navigate("HomeScreen");
-    }
-  }, [user, navigation]);
 
   const generateRandomCode = () => {
     const min = 100000; // Minimum 4-digit number
@@ -68,86 +117,77 @@ const SignUpScreen = () => {
         });
       })
       .catch((error) => {
-        console.error("Error getting documents: ", error);
+        console.error("Error getting Driver By Phone Number: ", error);
       });
   };
 
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
     const expectedCode = generateRandomCode();
-
-    // Check if Phone Number is empty
-    if (phoneNumber) {
-      db.collection("drivers")
+  
+    // Early return if phoneNumber is not provided
+    if (!phoneNumber) {
+      console.error("Phone number is required.");
+      return;
+    }
+  
+    try {
+      const querySnapshot = await db.collection("drivers")
         .where("phone", "==", phoneNumber)
-        .get()
-        .then((querySnapshot) => {
-          if (querySnapshot.empty) {
-            // No existing document found, proceed with creating a new one
-            const newDocRef = db.collection("drivers").doc();
-
-            newDocRef
-              .set({
-                dateRegistered: firebase.firestore.FieldValue.serverTimestamp(),
-                email: "",
-                name: "",
-                language: "en",
-                phone: phoneNumber,
-                authID: "",
-                otpDate: firebase.firestore.FieldValue.serverTimestamp(),
-                otpCode: expectedCode,
-                password: "",
-              })
-              .then(() => {
-                console.log("Document successfully written!");
-                console.log("OTP: " + expectedCode);
-
-                // setFirstDocID(docRef.id);
-                // console.log("#### Check Here #### - ", firstDocID);
-
-                getDriverByPhoneNumber(phoneNumber)
-
-                // Send the OTP Code
-                sendOTP();
-              })
-              .catch((error) => {
-                console.error("Error writing document: ", error);
-              });
-          } else {
-            // Existing document found, update the otpCode
-            querySnapshot.forEach((doc) => {
-              db.collection("drivers")
-                .doc(doc.id)
-                .update({
-                  otpCode: expectedCode,
-                })
-                .then(() => {
-                  
-                  console.log("OTP: " + expectedCode);
-
-                  setFirstDocID(doc.id);
-                  console.log("#### Successful Update #### ", firstDocID);
-
-                  // Write the Code to send the OTP Here
-                  sendOTP();
-                })
-                .catch((error) => {
-                  console.error("Error updating document: ", error);
-                });
-            });
-          }
-        })
-        .catch((error) => {
-          console.error("Error querying documents: ", error);
+        .get();
+  
+      let docId; // Variable to hold the document ID
+  
+      if (querySnapshot.empty) {
+        // No existing document found, proceed with creating a new one
+        const newDocRef = db.collection("drivers").doc();
+        await newDocRef.set({
+          dateRegistered: firebase.firestore.FieldValue.serverTimestamp(),
+          email: "",
+          name: "",
+          language: "en",
+          phone: phoneNumber,
+          authID: "",
+          otpDate: firebase.firestore.FieldValue.serverTimestamp(),
+          otpCode: expectedCode,
+          password: "",
         });
-
-      // Navigate to Confirm Code Screen
+        console.log("Document successfully written!");
+        console.log("OTP: " + expectedCode);
+  
+        // Since this is a new document, use the newly created document's ID
+        docId = newDocRef.id;
+      } else {
+        // Existing document(s) found, update the otpCode for the last document
+        const docs = querySnapshot.docs;
+        const lastDoc = docs[docs.length - 1]; // Get the last document in the snapshot
+  
+        await db.collection("drivers").doc(lastDoc.id).update({
+          otpCode: expectedCode,
+        });
+        console.log("OTP: " + expectedCode);
+  
+        // Use the last document's ID
+        docId = lastDoc.id;
+      }
+  
+      // Assuming setFirstDocID is a method to update state or similar
+      setFirstDocID(docId);
+      console.log("#### Document ID Set ####: ", docId);
+  
+      // Send the OTP Code
+      sendOTP();
+  
+      // Navigate to Confirm Code Screen after all operations have completed
       navigation.navigate("ConfirmCodeScreen", {
         phoneNumber: phoneNumber,
         expectedCode: expectedCode,
-        firstDocID: firstDocID,
+        firstDocID: docId,
       });
+    } catch (error) {
+      console.error("Error handling sign-in: ", error);
     }
   };
+  
 
   const handleTermsAndConditions = () => {
     Linking.openURL("https://mile.ke");

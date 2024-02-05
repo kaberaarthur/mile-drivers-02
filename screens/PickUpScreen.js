@@ -12,6 +12,8 @@ import { Marker } from "react-native-maps";
 import tw from "tailwind-react-native-classnames";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
+
 
 import {
   selectDestination,
@@ -33,8 +35,8 @@ const PickUpScreen = ({ route }) => {
   const navigation = useNavigation();
   const { ride } = route.params;
 
-  const origin = ride.rideOrigin[0];
-  const destination = ride.rideDestination[0];
+  const origin = ride?.rideOrigin?.[0];
+  const destination = ride?.rideDestination?.[0];
 
   /*
   const origin = {
@@ -53,45 +55,6 @@ const PickUpScreen = ({ route }) => {
   // Use the useSelector hook to select the data from the currentRideSlice
   const currentRideData = useSelector((state) => state.currentRide);
 
-  // Log Ride Slice
-  console.log(
-    "Current Ride - ",
-    currentRideData["currentRide"]["rideDestination"][0]["description"]
-  );
-
-  useEffect(() => {
-    if (!origin || !destination) return;
-
-    // Zoom and Fit to Markers - This Feature isn't working perfectly ATM
-    mapRef.current.fitToSuppliedMarkers(["origin", "destination"], {
-      edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-    });
-  }, [origin, destination]);
-
-  // Calculate Time Taken + Distance
-  useEffect(() => {
-    if (!origin || !destination) return;
-
-    // Encode URI Components
-    const encodedDestination = encodeURIComponent(destination["description"]);
-    const encodedOrigin = encodeURIComponent(origin["description"]);
-
-    const getTravelTime = async () => {
-      // const URL = `https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=${encodedOrigin}&destinations=${encodedDestination}&key=${GOOGLE_MAPS_APIKEY}`;
-      // console.log(URL);
-
-      fetch(
-        `https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=${encodedOrigin}&destinations=${encodedDestination}&key=${GOOGLE_MAPS_APIKEY}`
-      )
-        .then((res) => res.json())
-        .then((data) => {
-          dispatch(setTravelTimeInformation(data.rows[0].elements[0]));
-          console.log(data.rows[0].elements[0]);
-        });
-    };
-
-    getTravelTime();
-  }, [origin, destination, GOOGLE_MAPS_APIKEY]);
 
   const handleStartRide = () => {
     // Get the ride ID
@@ -115,58 +78,14 @@ const PickUpScreen = ({ route }) => {
   };
 
   return (
-    <View style={tw`flex-1`}>
-      <View style={tw`flex-1`}>
-        <MapView
-          ref={mapRef}
-          style={tw`flex-1`}
-          mapType="terrain"
-          initialRegion={{
-            latitude: origin["location"]["lat"],
-            longitude: origin["location"]["lng"],
-            latitudeDelta: 0.005,
-            longitudeDelta: 0.005,
-          }}
-        >
-          {origin && destination && (
-            <MapViewDirections
-              origin={origin.description}
-              destination={destination.description}
-              apikey={GOOGLE_MAPS_APIKEY}
-              strokeWidth={4}
-              strokeColor="black"
-            />
-          )}
-
-          {origin?.location && (
-            <Marker
-              coordinate={{
-                latitude: origin["location"]["lat"],
-                longitude: origin["location"]["lng"],
-              }}
-              title="Origin"
-              description={origin["description"]}
-              identifier="origin"
-              anchor={{ x: 0.5, y: 0.5 }}
-            >
-              <View style={styles.markerView}>
-                <Image source={markerImage} style={styles.markerImage} />
-              </View>
-            </Marker>
-          )}
-
-          {destination?.location && (
-            <Marker
-              coordinate={{
-                latitude: destination["location"]["lat"],
-                longitude: destination["location"]["lng"],
-              }}
-              title="Destination"
-              description={destination["description"]}
-              identifier="destination"
-            />
-          )}
-        </MapView>
+    <SafeAreaView style={tw`pt-10 flex-1`}>
+      <View style={tw`flex-row items-center justify-between mb-5 px-6`}>
+        <TouchableOpacity onPress={() => navigation.navigate("MenuScreen")}>
+          <Ionicons name="menu-outline" color="black" size={24} />
+        </TouchableOpacity>
+        <Text style={tw`font-bold text-base`}>
+          Pick Up
+        </Text>
       </View>
 
       <SafeAreaView style={tw`bg-white h-1/4`}>
@@ -175,7 +94,7 @@ const PickUpScreen = ({ route }) => {
             PICK UP AT
           </Text>
           <Text style={tw`text-gray-900 text-lg`}>
-            {currentRideData["currentRide"]["rideOrigin"][0]["description"]}
+            {currentRideData?.currentRide?.rideOrigin?.[0]?.description || 'Origin not available'}
           </Text>
         </View>
         <View style={tw`p-5`}>
@@ -187,7 +106,7 @@ const PickUpScreen = ({ route }) => {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
-    </View>
+    </SafeAreaView>
   );
 };
 

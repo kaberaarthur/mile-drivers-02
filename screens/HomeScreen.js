@@ -121,6 +121,8 @@ const HomeScreen = () => {
         delete vehicleData.dateCreated;
 
         dispatch(setVehicle(vehicleData));
+
+        console.log("########## Vehicle Data: ", vehicleData)
       }
 
     } catch (error) {
@@ -143,10 +145,23 @@ const HomeScreen = () => {
       console.log('Driver Document:', driverDocument);
 
       if (driverDocument) {
-        dispatch(setPerson(driverDocument));
-        dispatch(setUser(driverDocument));
+        
+        
+        // Convert otpDate and dateRegistered
+        const updatedOtpDate = driverDocument.otpDate.toDate().toISOString();
+        const updatedDateRegistered = driverDocument.dateRegistered.toDate().toISOString();
 
-        getDriverVehicleByAuthID(driverDocument.authID);
+        // Create a new object with updated fields
+        const updatedDriverDocument = {
+          ...driverDocument,
+          otpDate: updatedOtpDate,
+          dateRegistered: updatedDateRegistered,
+        };
+
+        dispatch(setPerson(updatedDriverDocument));
+        console.log("######## Updated Driver: ", updatedDriverDocument)
+
+        // getDriverVehicleByAuthID(driverDocument.authID);
       }
 
       return driverDocument;
@@ -157,65 +172,53 @@ const HomeScreen = () => {
   };
 
   useEffect(() => {
-    const checkUser = async () => {
+    let isMounted = true; // Flag to manage async operations
+  
+    const initializeAuth = async () => {
       try {
+        // Attempt to retrieve the user from AsyncStorage
         const storedUser = await AsyncStorage.getItem('user');
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
-          dispatch(setUser(parsedUser));
-          console.log("#### A USER EXISTS ####")
-          console.log('User UID:', parsedUser.uid);
+          console.log("#### A USER EXISTS ####");
+          console.log('User UID :', parsedUser.uid);
 
-          getDriverByUid(parsedUser.email);
-        } else {
-          console.log("#### NO USER STORED ####")
-          navigation.navigate('SignUpScreen');
+          getDriverByUid(parsedUser.email)
         }
+  
+        // Set up auth state listener
+        const unsubscribe = auth.onAuthStateChanged(async (authUser) => {
+          if (!isMounted) return; // Avoid state updates if component unmounted
+  
+          if (authUser) {
+            // User is signed in; update AsyncStorage and app state
+            await AsyncStorage.setItem('user', JSON.stringify(authUser));
+            console.log("######################");
+            console.log("The Current User: ", authUser);
+            console.log("######################");
+          } else if (!storedUser) {
+            // No user in storage and no authUser; direct to SignUpScreen
+            console.log("No User Detected - Redirecting to SignUpScreen");
+            navigation.navigate('SignUpScreen');
+          }
+          setLoading(false); // Update loading state
+        });
+  
+        // Return the unsubscribe function to be called on cleanup
+        return () => {
+          isMounted = false; // Prevent updates after unmount
+          unsubscribe(); // Unsubscribe from auth listener
+        };
       } catch (error) {
-        console.error('Error retrieving user from AsyncStorage:', error);
-      } finally {
+        console.error('Error initializing app state:', error);
         setLoading(false);
       }
     };
-
-    checkUser();
-
-    const unsubscribe = auth.onAuthStateChanged((authUser) => {
-      setLoading(false);
-
-      if (authUser) {
-        AsyncStorage.setItem('user', JSON.stringify(authUser));
-      } else {
-        AsyncStorage.removeItem('user');
-
-        // If no user exists, navigate to SignUpScreen
-        navigation.navigate('SignUpScreen');
-      }
-
-      console.log("The Current User: ", authUser);
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      navigation.navigate('SignUpScreen');
-    }
-  }, [loading, user, navigation]);
-
-  const handleLogout = async () => {
-    try {
-      await AsyncStorage.removeItem('user');
-      await auth.signOut();
-
-      navigation.navigate('SignUpScreen');
-    } catch (error) {
-      console.error('Error during logout:', error);
-    }
-  };
+  
+    initializeAuth();
+  }, [dispatch, navigation]); // Ensure dependencies are listed if they're used inside the effect
+  
+  
 
   const [driver, setDriver] = useState({
     isOnline: true,

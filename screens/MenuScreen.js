@@ -72,8 +72,10 @@ function MenuScreen() {
   }, [dispatch, person]);
   
 
+  console.log("######################");
+  console.log("Person Data:", person);
+  console.log("######################");
 
-  console.log("Person Data:", person["otpDate"]);
 
   // Use useSelector hook to select the data from the currentRideSlice
   const currentRideData = useSelector((state) => state.currentRide);
@@ -128,6 +130,10 @@ function MenuScreen() {
     try {
       await auth.signOut();
       // Additional cleanup or navigation logic can be added here
+
+      // Clear Async Storage
+      await AsyncStorage.removeItem('user');
+      
       console.log('User logged out successfully');
       navigation.navigate('SignUpScreen');
     } catch (error) {

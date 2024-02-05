@@ -419,10 +419,10 @@ const FinanceScreen = () => {
     return genders[Math.floor(Math.random() * genders.length)];
   }
 
-  const renderRideCard = (ride) => {
+  const renderRideCard = (ride, index) => {
     return (
       <TouchableOpacity onPress={() => copyToClipboard(ride.rideId)}>
-        <View key={`${ride.rideId}-${Date.now()}`} style={tw`bg-white p-4 mb-4`}>
+        <View key={`${ride.rideId}-${Date.now()}-${Math.random()}-${index}`} style={tw`bg-white p-4 mb-4`}>
           <Text style={tw`text-gray-900 text-lg font-bold mb-1`}>
             Ride: {ride.rideId}
           </Text>
@@ -521,7 +521,7 @@ const FinanceScreen = () => {
 
         {/* Rides History */}
         <View style={tw`py-4`}>
-          {transactionsList.map((ride) => renderRideCard(ride))}
+          {transactionsList.map((ride, index) => renderRideCard(ride, index))}
         </View>
       </ScrollView>
     </View>

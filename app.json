@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "firetry",
-    "slug": "firetry",
+    "name": "Mile Drivers",
+    "slug": "mile-drivers",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,14 +15,22 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "config": {
+        "googleMapsApiKey": "AIzaSyD0kPJKSOU4qtXrvddyAZFHeXQY2LMrz_M"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.kabera.firetry"
+      "package": "com.kabera.firetry",
+      "config": {
+        "googleMaps": {
+          "apiKey" : "AIzaSyD0kPJKSOU4qtXrvddyAZFHeXQY2LMrz_M"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"

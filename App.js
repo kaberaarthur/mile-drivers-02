@@ -33,7 +33,7 @@ import IDCardScreen from "./screens/IDCardScreen";
 import TestScreen from "./screens/TestScreen";
 
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import "react-native-gesture-handler";
+// import "react-native-gesture-handler";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 

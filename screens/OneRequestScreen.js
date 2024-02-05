@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Linking,
 } from "react-native";
-//import { Icon } from "react-native-elements";
 import { Ionicons } from "@expo/vector-icons";
 import tw from "tailwind-react-native-classnames";
 import { useNavigation } from "@react-navigation/native";
@@ -41,6 +40,8 @@ const OneRequestScreen = ({ route }) => {
   const goToPickUpScreen = () => {
     // Clone the ride object to avoid modifying the original object
     const updatedRide = { ...ride };
+
+    console.log("Going to Pick Up Screen")
     // console.log(typeof updatedRide.dateCreated.toISOString());
     console.log(typeof updatedRide.dateCreated.toDate().toISOString());
 
@@ -49,6 +50,7 @@ const OneRequestScreen = ({ route }) => {
 
     dispatch(setCurrentRide(updatedRide));
     navigation.navigate("PickUpScreen", { ride: updatedRide });
+    // navigation.navigate("TestScreen")
   };
 
   const handleCancelRequest = () => {
@@ -147,6 +149,7 @@ const OneRequestScreen = ({ route }) => {
       <TouchableOpacity
         style={tw`bg-yellow-500 rounded-sm p-2`}
         onPress={goToPickUpScreen}
+        disabled={ !ride }
       >
         <Text style={tw`text-center text-black font-bold text-lg`}>
           GO TO PICK UP

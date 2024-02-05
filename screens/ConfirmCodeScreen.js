@@ -131,7 +131,7 @@ const ConfirmCodeScreen = ({ navigation, route }) => {
             console.log("No Documents Found in the Drivers Collection");
             setErrorMessage("No User Exists for that Phone Number");
 
-            console.log("################# - ", firstDocID)
+            console.log("$$$$***#### - ", firstDocID)
 
             // Send the User to Update their Profile Info
             navigation.navigate("UpdateProfileScreen", {
